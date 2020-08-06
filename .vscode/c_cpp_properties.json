@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/home/ken/.arduino15/packages/arduino/tools/**",
+                "/home/ken/.arduino15/packages/arduino/hardware/avr/1.8.2/**",
+                "/home/ken/projects/**",
+                "/home/ken/libraries/**",
+                "/home/ken/snap/arduino/23/Arduino/libraries/"
+            ],
+            "forcedInclude": [
+                "/home/ken/.arduino15/packages/arduino/hardware/avr/1.8.2/cores/arduino/Arduino.h",
+                "/snap/arduino/23/hardware/arduino/avr/cores/arduino/Arduino.h"
+            ],
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
