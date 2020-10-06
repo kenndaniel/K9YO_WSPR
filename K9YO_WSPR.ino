@@ -1,12 +1,12 @@
-//#define DEBUG // Debug serial output is generated if DEBUG is defined
+//#define DEBUG // Debug output is generated if DEBUG is defined
 //#define GPS_CHARGE  // When defined will keep the gps on all the time
-const char call[] = "K9YO"; // WSPR Standard callsign
+const char call[] = "K9YO"; // Ameture callsign
 const char telemID[] = "T1"; // Telemetry call prefix
 //If you go to Wikipedia and look up ITU prefix you will find that there are many more prefixes available. 
 //For example "any letter other than A,K,W,R,M,B,F,G,I,N, + 1", "X + any number", E8, E9,J9, " letter O + any number" , T9, "U + any number"
-
+#define SEND_INTERVAL 1 // The number of minutes between transmissions
 #define WSPR_FREQ       14096500UL  // Center of WSPR 20m band
-#define WSPR_FREQ_OFFSET  -500   // Added to the WSPR FREQ to get the final frequency
+#define WSPR_FREQ_OFFSET  400   // Added to the WSPR FREQ to get the final frequency
 
 #include <Time.h>
 #include <TimeLib.h>
@@ -95,7 +95,6 @@ void loc_dbm_telem();
 void sleep();
 float getTempCPU();
 double getTemperature();
-
 
 #ifdef DEBUG
 #define POUTPUT(x) Serial.print x
@@ -205,9 +204,9 @@ bool gpsGetInfo()
   {
     
     while (ss.available() > 0)
-      gps.encode(ss.read());
+      gps.encode(ss.read()); 
 
-    if (gps.time.isUpdated())
+    if (gps.time.isUpdated() && gps.satellites.value() > 0)
     {
       if (SetCPUClock( gps))
       {
@@ -258,6 +257,9 @@ bool gpsGetInfo()
       if (wiringCounter > 15)
       { 
         wiringCounter = 0;
+        #ifdef DEBUG
+          return true;
+        #endif
         gpsBounce();
       }
     }

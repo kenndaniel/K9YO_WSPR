@@ -10,6 +10,8 @@ void sleep()  // Reset the system by turning the power off
     POUTPUTLN((F("Sleep Pwr off")));
     gpsOff();
     digitalWrite(SLEEP_PIN, HIGH);  // This will turn off the timer when using a battery
+    unsigned long duration = (unsigned long)(SEND_INTERVAL*60000);
+    delay(duration);  // Wait until it is time for the next transmission
     resetFunc();  // Reset Arduino
     //delay(6000);  // for testing purposes only
 }

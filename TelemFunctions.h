@@ -3,7 +3,7 @@
 */
 
 
-#define DEBUG
+
 
 void setModeJT9_1()
 {
