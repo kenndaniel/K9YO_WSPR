@@ -1,4 +1,4 @@
-//#define DEBUG // Debug output is generated if DEBUG is defined
+#define DEBUG // Debug output is generated if DEBUG is defined
 //#define GPS_CHARGE  // When defined will keep the gps on all the time
 const char call[] = "K9YO"; // Ameture callsign
 const char telemID[] = "T1"; // Telemetry call prefix
