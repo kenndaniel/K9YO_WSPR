@@ -1,4 +1,4 @@
-#define DEBUG // Debug output is generated if DEBUG is defined
+//#define DEBUG // Debug output is generated if DEBUG is defined
 //#define GPS_CHARGE  // When defined will keep the gps on all the time
 const char call[] = "K9YO"; // Ameture callsign
 const char telemID[] = "T1"; // Telemetry call prefix
@@ -6,10 +6,14 @@ const char telemID[] = "T1"; // Telemetry call prefix
 //For example "any letter other than A,K,W,R,M,B,F,G,I,N, + 1", "X + any number", E8, E9,J9, " letter O + any number" , T9, "U + any number"
 #define SEND_INTERVAL 1 // The number of minutes between transmissions
 #define WSPR_FREQ       14096500UL  // Center of WSPR 20m band
-#define WSPR_FREQ_OFFSET  400   // Added to the WSPR FREQ to get the final frequency
+#define WSPR_FREQ_OFFSET 0 //400   // Added to the WSPR FREQ to get the final frequency
+volatile bool CalibrationDone = false; 
+volatile unsigned long mult=0;
+volatile unsigned int tcount=0;
+volatile unsigned long XtalFreq=25000000UL;
+volatile int32_t FreqCorrection_ppb;
 
 #include <Time.h>
-#include <TimeLib.h>
 
 //#pragma GCC diagnostic error "-Wconversion"
 /*
@@ -20,7 +24,9 @@ const char telemID[] = "T1"; // Telemetry call prefix
    and it is for non-commercial use only.
    Please see readme file for more information.
 */
-#include <avr/wdt.h>
+#include <avr/interrupt.h> 
+#include <avr/io.h> 
+//#include <avr/wdt.h>
 #include <TimeLib.h>
 #include <si5351.h>
 #include <JTEncode.h>
@@ -87,7 +93,7 @@ double getAltitude();
 int readRadiation();
 void setGPStime();
 void rf_off();
-void rf_on();
+void rf_on(int32_t freqCorrection);
 void call_telem();
 void loc8calc();
 void call_dbm_telem();
@@ -108,27 +114,71 @@ double getTemperature();
 #define POUTPUTLN(x)
 #endif
 
+#define ppsPin  2 
 #define RADIATION_PIN A7 // Analog radiation sensor
 #define RFPIN 9 // Not used
-#define SLEEP_PIN 2
+#define SLEEP_PIN 7
 #define DBGPIN 13
 #define GPS_POWER 6 // Pull down to turn on GPS module
+#define  XtalCalibratCtPIN 5   // SI5351 calibration clock
 static const int RxPin = 4;
 static const int TxPin = 3;
 static const uint32_t GPSBaud = 9600;
 
 #include "GPS.h"            // code to set U-Blox GPS into airborne mode
-#include "ModeDef.h"        // JT mode definitions
-#include "TelemFunctions.h" // Sends messages using SI5351
-#include "timing4.h"        // scheduling
+//#include "ModeDef.h"        // JT mode definitions
+#include "SI5351Interface.h" // Sends messages using SI5351
+#include "SendMessages.h"        // schedules the sending of messages
 
 TinyGPSPlus gps;
 SoftwareSerial ss(RxPin, TxPin);
-// gps must lock within 1.5 minutes or system will sleep or use the default location
-const unsigned long gpsTimeout = 180000; 
+// gps must lock within 15 minutes or system will sleep or use the default location
+const unsigned long gpsTimeout = 9000000; 
 unsigned long gpsStartTime = 0;
+
+
+void PPSinterrupt()
+{
+  // Called on every pulse per second after gps sat lock
+  if (CalibrationDone == true) return;
+  tcount++;
+  if (tcount == 4)  // Start counting the 2.5 MHz signal from Si5351A CLK0
+  {
+    TCCR1B = 7;    //Count on rising edge of pin 5
+    TCNT1  = 0;                                    //Reset counter to zero
+  }
+  else if (tcount == 44)  //The 40 second counting time has elapsed - stop counting
+  {     
+    TCCR1B = 0;                                  //Turn off counter
+    // XtalFreq = overflow count + current count
+    XtalFreq = (mult * 0x10000 + TCNT1)/4; 
+    FreqCorrection_ppb =  (XtalFreq - 25000000UL)*20;  
+    POUTPUT(F(" Final Xtal Correction "));
+    POUTPUTLN((XtalFreq));
+    POUTPUTLN((mult));
+    POUTPUTLN((FreqCorrection_ppb));          //Calculated correction factor
+    mult = 0;
+    tcount = 0;                              //Reset the seconds counter
+    CalibrationDone = true;                  
+  }
+}
+
+// Timer 1 overflow intrrupt vector.
+ISR(TIMER1_OVF_vect) 
+{ // This executes when the count of cycles on pin 5 overflows
+  // pin 5 is connected to clock 2 of si5351
+  mult++;                                          //Increment multiplier
+  TIFR1 = (1<<TOV1);                               //Clear overlow flag 
+}
 void setup()
 {
+    //Set up Timer1 as a frequency counter - input at pin 5
+  TCCR1B = 0;                                    //Disable Timer5 during setup
+  TCCR1A = 0;                                    //Reset
+  TCNT1  = 0;                                    //Reset counter to zero
+  TIFR1  = 1;                                    //Reset overflow
+  TIMSK1 = 1;                                    //Turn on overflow flag
+
   pinMode(RADIATION_PIN, INPUT);
   pinMode(RFPIN, OUTPUT);
   pinMode(SLEEP_PIN, OUTPUT);
@@ -136,19 +186,27 @@ void setup()
   digitalWrite(RFPIN, LOW);
   digitalWrite(SLEEP_PIN, LOW);
 
-  gpsOn();
-
 #ifdef DEBUG
   Serial.begin(9600);
 #endif
+
+  gpsOn();
+
+  si5351_calibrate_init();
+
+
+
+    // Inititalize GPS 1pps input
+  pinMode(ppsPin, INPUT_PULLUP);
+
+  // Set 1PPS pin 2 for external interrupt input
+  attachInterrupt(digitalPinToInterrupt(ppsPin), PPSinterrupt, RISING); 
+
   //Serial.begin(9600);
   POUTPUTLN((F("START")));
-  // If it is night do not attempt to transmit
   float cpuTemp = getTempCPU();
   POUTPUT((F(" Temp-> ")));
   POUTPUTLN((cpuTemp));
-  // if it isn't daytime, go back to sleep
-
 
   POUTPUT(F(" Battery Voltage "));
   volts = readVcc();
@@ -156,15 +214,10 @@ void setup()
   if (volts <= MIN_VOLTAGE)
   sleep();
 
-  //ss.begin(GPSBaud);
-  //POUTPUTLN(F(" GPS begin"));
   digitalWrite(DBGPIN, HIGH);
-  //setGPS_AirBorne(); // Set GPS into airborne mode
-  //delay(15000);
+
   gpsStartTime = millis();
 
-  //gps_set_max_performance_mode(); // Set GPS into high performance mode
-  //delay(500);
 }
 
 long loopi = 0;
@@ -180,9 +233,7 @@ void loop()
   gpsOff();
   POUTPUTLN((F(" Starting Transmit Logic")));
   SendMessages();
-  //Serial.print(hour()); Serial.print(F(":"));Serial.println(minute());
   sleep();
-  // Below is only executed when the timer is disconnected for development
 
 }
 
@@ -191,8 +242,7 @@ int wiringCounter = 1;
 
 bool gpsGetInfo()
 {
-  // TinyGPSPlus gps;
-  // SoftwareSerial ss(RxPin, TxPin);
+
   clockSet = false, locSet = false, altitudeSet = false, speedSet = false;
   ss.begin(GPSBaud);
   unsigned long millsTime = 0;
@@ -235,7 +285,6 @@ bool gpsGetInfo()
       return true;
 
     loopi++;
-    
 
     if (gps.charsProcessed() < 10 && millis() % 1500 < 5)
     {

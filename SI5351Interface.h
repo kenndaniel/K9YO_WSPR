@@ -1,9 +1,17 @@
 /*
-   Telemetry functions
+   Functions that interface with the SI5351 Transmitter
+*/
+/*
+   Mode defines
 */
 
+#define JT9_TONE_SPACING        174           // ~1.74 Hz
+#define WSPR_TONE_SPACING       146           // ~1.46 Hz
 
+#define JT9_DELAY               576          // Delay value for JT9
+#define WSPR_DELAY              683          // Delay value for WSPR
 
+#define JT9_FREQ        14000000UL
 
 void setModeJT9_1()
 {
@@ -57,8 +65,6 @@ void setModeWSPR_telem()
   jtencode.wspr_encode(call_telemetry, loc4, dbm_telemetry, tx_buffer);
 }
 
-
-
 /*
    Message encoding
 */
@@ -66,37 +72,53 @@ void encode() // Loop through the string, transmitting one character at a time
 {
   uint8_t i;
   digitalWrite(RFPIN, HIGH);
-  si5351.output_enable(SI5351_CLK0, 1); // Reset the tone to the base frequency and turn on the output
+  si5351.output_enable(SI5351_CLK1, 1); // Reset the tone to the base frequency and turn on the output
   const unsigned long period = tone_delay;
   unsigned long time_now = 0;
 
   for (i = 0; i < symbol_count; i++) // Now transmit the channel symbols
   {
     time_now = millis();
-    si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK0);
+    si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK1);
     while(millis() < time_now + period)  // Found to be more accruate
     {}
     //delay(tone_delay);
 
   }
 
-  si5351.output_enable(SI5351_CLK0, 0); // Turn off the output
+  si5351.output_enable(SI5351_CLK1, 0); // Turn off the output
      
   digitalWrite(RFPIN, LOW);
 }
 
-
-void rf_on()
+void si5351_calibrate_init()
 {
+  // Initialize SI5351 for gps calibration
   digitalWrite(RFPIN, HIGH);
   //delay(2000);
-  POUTPUT((F(" SI Init ")));
+  POUTPUT((F(" SI Calibration Init ")));
   bool siInit = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);    // TCXO 25MHz
   delay(2000);
-  POUTPUT((F(" SI5355 Init Success")));
-  si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA); // Set for max power if desired. Check datasheet.
-  si5351.output_enable(SI5351_CLK0, 0);                 // Disable the clock initially
+  if (siInit == false) {Serial.println(" XXXXXXXXX Si5351 init failure XXXXXX");}
+  else {POUTPUT((F(" SI5355 Calibration Init Success")));}
+  si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_2MA); //  Check datasheet.
+  unsigned long calfreq = 2500000UL;
+  si5351.set_freq(calfreq*100, SI5351_CLK2);  // set calibration count frequency to 2.5 MHz
+  si5351.output_enable(SI5351_CLK2, 1);   // Enable output 1 
 }
+
+
+void rf_on(int32_t freqCorrection)
+{
+  // freqCorrection correction in ppb ( differece in Hz time 10)
+  digitalWrite(RFPIN, HIGH);
+  si5351.set_correction(freqCorrection, SI5351_PLL_INPUT_XO);
+  si5351.output_enable(SI5351_CLK2, 0); // Disable calibration signal
+  si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_8MA); // Set for max power if desired. Check datasheet.
+  si5351.output_enable(SI5351_CLK1, 0);                 // Disable the clock initially
+}
+
+
 
 void rf_off()
 {

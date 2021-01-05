@@ -68,8 +68,6 @@ char codePos456(int min, int max, int value)
     return slet[value];
 }
 
-
-
 // uint8_t codeDBM(float solarV, int numSat)
 // {
 //     float v[] = {.2, .4, .6, .8, 1.0, 1.2};
@@ -128,16 +126,3 @@ void madenhead(double flat, double flon, char MH[])
 
 }
 
-void code_telem_callsign(char Callsign[], float altitude, int volts,  float gpsSpeed , float tempOutside)
-{
-        Callsign[0] = telemID[0]; // first part of index/channel e.g. T
-        Callsign[1] = telemID[1]; // second part of index/channel e.g. 1
-
-        Callsign[2] = codePos2(altitude); //Altitude fine
-        
-        Callsign[3] = codePos456(2000, 5000, int(volts));
-        Callsign[4] = codePos456(-45, 10, int(tempOutside));
-        Callsign[5] = codePos456(0, 200, int(gpsSpeed));
-        Callsign[6] = '\0';
-
-}

@@ -1,18 +1,34 @@
 
 // ------ Message initialize functions -----
 
-#include "code_message.h"
-#include "measurement.h"
+#include "ConvertData.h"
+#include "Sensors.h"
 
-
+// function prototype
 void madenhead(double flat, double flon, char MH[]);
+
+
+
+void code_characters(char Callsign[], float altitude, int volts,  float gpsSpeed , float tempOutside)
+{
+        Callsign[0] = telemID[0]; // first part of index/channel e.g. T
+        Callsign[1] = telemID[1]; // second part of index/channel e.g. 1
+
+        Callsign[2] = codePos2(altitude); //Altitude fine
+        
+        Callsign[3] = codePos456(2000, 5000, int(volts));
+        Callsign[4] = codePos456(-45, 10, int(tempOutside));
+        Callsign[5] = codePos456(0, 200, int(gpsSpeed));
+        Callsign[6] = '\0';
+
+}
 
 void code_telemetry_callsign()
 {
   float tempCPU = getTempCPU();
 
   // code telemetry callsign
-  code_telem_callsign(call_telemetry, gpsAltitude, volts, gpsSpeed, tempCPU);
+  code_characters(call_telemetry, gpsAltitude, volts, gpsSpeed, tempCPU);
   //code_telem_callsign(call_telemetry, gpsAltitude, radiation, tempCPU, tempOutside);
 }
 
