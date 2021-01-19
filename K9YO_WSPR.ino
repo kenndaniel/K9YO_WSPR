@@ -1,17 +1,19 @@
-//#define DEBUG // Debug output is generated if DEBUG is defined
+#define DEBUG // Debug output is generated if DEBUG is defined
 //#define GPS_CHARGE  // When defined will keep the gps on all the time
-const char call[] = "K9YO"; // Ameture callsign
+const char call[] = "K9YO"; // Amateur callsign
 const char telemID[] = "T1"; // Telemetry call prefix
 //If you go to Wikipedia and look up ITU prefix you will find that there are many more prefixes available. 
 //For example "any letter other than A,K,W,R,M,B,F,G,I,N, + 1", "X + any number", E8, E9,J9, " letter O + any number" , T9, "U + any number"
 #define SEND_INTERVAL 1 // The number of minutes between transmissions
-#define WSPR_FREQ       14096500UL  // Center of WSPR 20m band
-#define WSPR_FREQ_OFFSET 0 //400   // Added to the WSPR FREQ to get the final frequency
+#define WSPR_FREQ       14097100  // Center of WSPR 20m band
+// Variables needed for SI5351 processing
 volatile bool CalibrationDone = false; 
 volatile unsigned long mult=0;
 volatile unsigned int tcount=0;
 volatile unsigned long XtalFreq=25000000UL;
-volatile int32_t FreqCorrection_ppb;
+volatile int32_t FreqCorrection_ppb = 0;
+volatile float correction =0;
+unsigned long freq = (unsigned long) (WSPR_FREQ);
 
 #include <Time.h>
 
@@ -51,7 +53,7 @@ Si5351 si5351;
 JTEncode jtencode;
 
 // Global variables
-unsigned long freq = WSPR_FREQ + WSPR_FREQ_OFFSET;
+
 
 #define DAYTIME_RADIATION 180 // Operation is prevented below these values (e.g. nighttime)
 #define MORN_TEMP -30
@@ -136,7 +138,6 @@ SoftwareSerial ss(RxPin, TxPin);
 const unsigned long gpsTimeout = 9000000; 
 unsigned long gpsStartTime = 0;
 
-
 void PPSinterrupt()
 {
   // Called on every pulse per second after gps sat lock
@@ -145,17 +146,20 @@ void PPSinterrupt()
   if (tcount == 4)  // Start counting the 2.5 MHz signal from Si5351A CLK0
   {
     TCCR1B = 7;    //Count on rising edge of pin 5
-    TCNT1  = 0;                                    //Reset counter to zero
+    TCNT1  = 0;    //Reset counter to zero
   }
   else if (tcount == 44)  //The 40 second counting time has elapsed - stop counting
   {     
     TCCR1B = 0;                                  //Turn off counter
     // XtalFreq = overflow count + current count
-    XtalFreq = (mult * 0x10000 + TCNT1)/4; 
-    FreqCorrection_ppb =  (XtalFreq - 25000000UL)*20;  
-    POUTPUT(F(" Final Xtal Correction "));
+    XtalFreq = 40 + (mult * 0x10000 + TCNT1)/4;  
+    correction = 25000000./(float)XtalFreq;
+    //freq = (unsigned long) (WSPR_FREQ*(correction));
+    freq = (unsigned long) (WSPR_FREQ);
+    FreqCorrection_ppb = (int32_t)((1.-correction)*1e9);
+    POUTPUT(F(" Final Xtal Corrections "));
     POUTPUTLN((XtalFreq));
-    POUTPUTLN((mult));
+    POUTPUTLN((freq));
     POUTPUTLN((FreqCorrection_ppb));          //Calculated correction factor
     mult = 0;
     tcount = 0;                              //Reset the seconds counter
