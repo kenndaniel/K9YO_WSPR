@@ -1,10 +1,10 @@
-#define DEBUG // Debug output is generated if DEBUG is defined
+//#define DEBUG // Debug output is generated if DEBUG is defined
 //#define GPS_CHARGE  // When defined will keep the gps on all the time
 const char call[] = "K9YO"; // Amateur callsign
 const char telemID[] = "T1"; // Telemetry call prefix
 //If you go to Wikipedia and look up ITU prefix you will find that there are many more prefixes available. 
 //For example "any letter other than A,K,W,R,M,B,F,G,I,N, + 1", "X + any number", E8, E9,J9, " letter O + any number" , T9, "U + any number"
-#define SEND_INTERVAL 1 // The number of minutes between transmissions
+#define SEND_INTERVAL 5 // The number of minutes between transmissions
 #define WSPR_FREQ       14097100  // Center of WSPR 20m band
 // Variables needed for SI5351 processing
 volatile bool CalibrationDone = false; 
@@ -57,7 +57,7 @@ JTEncode jtencode;
 
 #define DAYTIME_RADIATION 180 // Operation is prevented below these values (e.g. nighttime)
 #define MORN_TEMP -30
-#define MIN_VOLTAGE 2.9
+#define MIN_VOLTAGE 2.8
 #define BMP280_I2C_ALT true // True if the pressure sensor (BMP280) uses the alternate i2c add
 //uint8_t dbm; // dbm field of WSPR
 
@@ -152,11 +152,13 @@ void PPSinterrupt()
   {     
     TCCR1B = 0;                                  //Turn off counter
     // XtalFreq = overflow count + current count
-    XtalFreq = 40 + (mult * 0x10000 + TCNT1)/4;  
+    XtalFreq = 50 + (mult * 0x10000 + TCNT1)/4;  
     correction = 25000000./(float)XtalFreq;
-    //freq = (unsigned long) (WSPR_FREQ*(correction));
-    freq = (unsigned long) (WSPR_FREQ);
-    FreqCorrection_ppb = (int32_t)((1.-correction)*1e9);
+    // I found that adjusting the transmit freq gives a cleaner signal
+    freq = (unsigned long) (WSPR_FREQ*(correction));
+    // random number to create random frequency -spread spectrum
+    freq = freq +(unsigned long) random(-75,75);
+    //FreqCorrection_ppb = (int32_t)((1.-correction)*1e9);
     POUTPUT(F(" Final Xtal Corrections "));
     POUTPUTLN((XtalFreq));
     POUTPUTLN((freq));
@@ -182,7 +184,7 @@ void setup()
   TCNT1  = 0;                                    //Reset counter to zero
   TIFR1  = 1;                                    //Reset overflow
   TIMSK1 = 1;                                    //Turn on overflow flag
-
+  randomSeed(analogRead(0));
   pinMode(RADIATION_PIN, INPUT);
   pinMode(RFPIN, OUTPUT);
   pinMode(SLEEP_PIN, OUTPUT);
