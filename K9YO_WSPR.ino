@@ -4,7 +4,7 @@ const char call[] = "K9YO"; // Amateur callsign
 const char telemID[] = "T1"; // Telemetry call prefix
 //If you go to Wikipedia and look up ITU prefix you will find that there are many more prefixes available. 
 //For example "any letter other than A,K,W,R,M,B,F,G,I,N, + 1", "X + any number", E8, E9,J9, " letter O + any number" , T9, "U + any number"
-#define SEND_INTERVAL 5 // The number of minutes between transmissions
+#define SEND_INTERVAL 7 // The number of minutes between transmissions
 #define WSPR_FREQ       14097100  // Center of WSPR 20m band
 // Variables needed for SI5351 processing
 volatile bool CalibrationDone = false; 
