@@ -256,11 +256,18 @@ bool gpsGetInfo()
   millsTime = millis();
   POUTPUTLN((millsTime));
   POUTPUTLN((gpsTimeout));
+  bool hiAltitudeSet = false;
   while (millis() < gpsStartTime + gpsTimeout)
   {
     
     while (ss.available() > 0)
       gps.encode(ss.read()); 
+
+    if (gps.charsProcessed() > 10 && hiAltitudeSet == false)
+    {
+      ss.write("$PMTK886,3*2B\r\n");
+      hiAltitudeSet = true;
+    }
 
     if (gps.time.isUpdated() && gps.satellites.value() > 0)
     {
