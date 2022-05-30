@@ -1,37 +1,4 @@
 
-#define RADIATION_MEASURE_POINT 200 // determines mid morning and mid afternoon
-
-int lastRadiationReading = 0;
-
-int readRadiation()
-{ 	// sensorValue is between 0 and 1024
-	unsigned int sensorValue = analogRead(RADIATION_PIN);
-	delay(500);
-    sensorValue += analogRead(RADIATION_PIN);
-	delay(250);
-    sensorValue += analogRead(RADIATION_PIN);
-	delay(250);
-    sensorValue += analogRead(RADIATION_PIN);
-	delay(500);
-    sensorValue += analogRead(RADIATION_PIN);
-
-	// scale sensor value
-    sensorValue = ((float)sensorValue / 5.) ;
-	lastRadiationReading = sensorValue;
-	return sensorValue;
-}
-
-
-int getRadiation()
-{
-	return lastRadiationReading;
-}
-
-
-float getBatteryVolt()
-{ 
-    return 3.8;// not used
-}
 
 float getTempCPU()
 {  // processor internal temperature
@@ -48,7 +15,7 @@ float getTempCPU()
 }
 
 long readVcc() 
-{  //Read voltage 5000 = 5v
+{  //Read voltage in mV 5000 = 5v
   long result;
   // Read 1.1V reference against AVcc
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);

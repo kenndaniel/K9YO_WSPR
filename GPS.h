@@ -2,7 +2,7 @@
    GPS functions
 */
 
-void sendUBX(uint8_t *MSG, uint8_t len)
+void sendUBX(uint8_t *MSG, uint8_t len) // Not used
 {
   Serial.flush();
   Serial.write(0xFF);
@@ -12,7 +12,7 @@ void sendUBX(uint8_t *MSG, uint8_t len)
   }
 }
 
-boolean getUBX_ACK(uint8_t *MSG)
+boolean getUBX_ACK(uint8_t *MSG)  // Not used
 {
   uint8_t b;
   uint8_t ackByteID = 0;
@@ -64,7 +64,7 @@ boolean getUBX_ACK(uint8_t *MSG)
 }
 
 
-void setGPS_AirBorne()
+void setGPS_AirBorne() // not used
 {
   int gps_set_sucess = 0;
   uint8_t setdm6[] = {
@@ -94,7 +94,7 @@ void gps_reset()
   gps_set_sucess = getUBX_ACK(set_reset);
 }
 
-void gps_set_max_performance_mode()
+void gps_set_max_performance_mode()  // Not used
 {
   int gps_set_sucess = 0;
   uint8_t setMax[] = {
@@ -120,15 +120,8 @@ bool SetCPUClock(TinyGPSPlus gps)
     h = gps.time.hour();
     m = gps.time.minute();
     s = gps.time.second();
-    age = gps.time.age();
-    //Serial.println((int)y);
-    //Serial.println((int)mon);
-    //Serial.println((int)d);
-    //Serial.println((int)h);
-    //Serial.println((int)m);
-    //Serial.println((int)s);
-    POUTPUT((F("Time Age ")));
-    POUTPUTLN((age));
+    age = gps.time.age();  // Time since sat syncronization - add to sat time
+
     if (age > 1000 && age < (195000)) // limited to size of byte 255-60
     {
       s += (byte)(age / 1000);
@@ -155,30 +148,31 @@ bool SetCPUClock(TinyGPSPlus gps)
 
     }
       POUTPUTLN((s));
-      POUTPUTLN((F("SyncWithGPS Set cpu tm")));
+      POUTPUTLN((F("cpu time set - waiting for position")));
       return true;
   
 }
-
+// not needed for newer gps units
 void gpsOn()
 {
-  // 
-  digitalWrite(GPS_POWER, LOW);
+  // not used
+  //digitalWrite(GPS_POWER, LOW);
 }
 
 void gpsOff()
 {
-  //
-  digitalWrite(TxPin, LOW);
-  #ifndef GPS_CHARGE
-  digitalWrite(GPS_POWER, HIGH);
-  #endif
+  // not used
+  //digitalWrite(TxPin, LOW);
+  //#ifndef GPS_CHARGE
+  //digitalWrite(GPS_POWER, HIGH);
+  //#endif
 }
 
 void gpsBounce()
 {
+  // Not used for newer gps
   //  Turn the power to GPS off and after .5 sec turn it on again
-  gpsOff();
-  delay(500);
-  gpsOn();
+  //gpsOff();
+  //delay(500);
+  //gpsOn();
 }

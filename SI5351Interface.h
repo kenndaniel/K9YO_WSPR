@@ -34,7 +34,7 @@ void setModeJT9_2()
 }
 
 void setModeWSPR()
-{
+{ // Sends the info to the si5351 for the standard message
   symbol_count = WSPR_SYMBOL_COUNT;
   tone_spacing = WSPR_TONE_SPACING;
   tone_delay = WSPR_DELAY;
@@ -44,25 +44,23 @@ void setModeWSPR()
   POUTPUT((F(" ")));
   POUTPUT((loc4));
   POUTPUT((F(" ")));
-  POUTPUTLN((dbm_telemetry));
-  POUTPUT((F(" ")));
-  POUTPUTLN((symbol_count));
-  jtencode.wspr_encode(call, loc4, dbm_telemetry, tx_buffer);
+  POUTPUTLN((dbm_standard));  // rough altitude
+  jtencode.wspr_encode(call, loc4, dbm_standard, tx_buffer);
 }
 
 void setModeWSPR_telem()
-{
+{  // sends the info to the si5351 for the telemetry message
   symbol_count = WSPR_SYMBOL_COUNT;
   tone_spacing = WSPR_TONE_SPACING;
   tone_delay = WSPR_DELAY;
   //freq = WSPR_FREQ; 
   memset(tx_buffer, 0, 165); // Clears Tx buffer from previous operation.
   POUTPUT((call_telemetry));
-  POUTPUT((F(" ")));
-  POUTPUT((loc4));
-  POUTPUT((F(" ")));
+  POUTPUT((F("-")));
+  POUTPUT((loc4_telemetry));
+  POUTPUT((F("-")));
   POUTPUTLN((dbm_telemetry));
-  jtencode.wspr_encode(call_telemetry, loc4, dbm_telemetry, tx_buffer);
+  jtencode.wspr_encode(call_telemetry, loc4_telemetry, dbm_telemetry, tx_buffer);
 }
 
 /*
@@ -96,15 +94,15 @@ void si5351_calibrate_init()
   // Initialize SI5351 for gps calibration
   digitalWrite(RFPIN, HIGH);
   //delay(2000);
-  POUTPUT((F(" SI Calibration Init ")));
-  bool siInit = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);    // TCXO 25MHz
+  POUTPUTLN((F(" SI5351 Initialized ")));
+  bool siInit = si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0);    //  25MHz
   delay(2000);
   if (siInit == false) {Serial.println(" XXXXXXXXX Si5351 init failure XXXXXX");}
-  else {POUTPUT((F(" SI5355 Calibration Init Success")));}
+  //else {POUTPUTLN((F(" SI5355  Init Success")));}
   si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_2MA); //  Check datasheet.
   unsigned long calfreq = 2500000UL;
   si5351.set_freq(calfreq*100, SI5351_CLK2);  // set calibration count frequency to 2.5 MHz
-  si5351.output_enable(SI5351_CLK2, 1);   // Enable output 1 
+  si5351.output_enable(SI5351_CLK2, 1);   // Enable output  
 }
 
 
