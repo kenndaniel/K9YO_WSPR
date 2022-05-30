@@ -1,12 +1,21 @@
-//#define DEBUG // Debug output is generated if DEBUG is defined
-//#define GPS_CHARGE  // When defined will keep the gps on all the time
-const char call[] = "K9YO"; // Amateur callsign
-const char telemID[] = "T1"; // Telemetry call prefix
-//If you go to Wikipedia and look up ITU prefix you will find that there are many more prefixes available. 
-//For example "any letter other than A,K,W,R,M,B,F,G,I,N, + 1", "X + any number", E8, E9,J9, " letter O + any number" , T9, "U + any number"
-#define SEND_INTERVAL 7 // The number of minutes between transmissions
-#define WSPR_FREQ       14097100  // Center of WSPR 20m band
-// Variables needed for SI5351 processing
+/*
+   HABalloon by KD2NDR, Miami Florida October 25 2018
+   Improvements by YO3ICT, Bucharest Romania, April-May 2019 
+   Modified to be simpler and work on standard Arduino by K9YO Chicago IL 2019 - March 2022
+   You may use and modify the following code to suit
+   your needs so long as it remains open source
+   and it is for non-commercial use only.
+   Please see readme file for more information.
+*/
+
+// Modify the callsign and telemetry channel info in this file
+#include "config.h" 
+
+#define SEND_INTERVAL 1 // The minimum number of minutes between transmissions
+
+#define SENSOR_PIN A7 // Generic analog sensor - A7 can be changed to any unused pin
+    
+// Variables needed for SI5351 calibration processing
 volatile bool CalibrationDone = false; 
 volatile unsigned long mult=0;
 volatile unsigned int tcount=0;
@@ -15,20 +24,11 @@ volatile int32_t FreqCorrection_ppb = 0;
 volatile float correction =0;
 unsigned long freq = (unsigned long) (WSPR_FREQ);
 
-#include <Time.h>
 
-//#pragma GCC diagnostic error "-Wconversion"
-/*
-   HABalloon by KD2NDR, Miami Florida October 25 2018
-   Improvements by YO3ICT, Bucharest Romania, April-May 2019 
-   You may use and modify the following code to suit
-   your needs so long as it remains open source
-   and it is for non-commercial use only.
-   Please see readme file for more information.
-*/
+#include <Time.h>
 #include <avr/interrupt.h> 
 #include <avr/io.h> 
-//#include <avr/wdt.h>
+#include <avr/wdt.h>
 #include <TimeLib.h>
 #include <si5351.h>
 #include <JTEncode.h>
@@ -36,7 +36,6 @@ unsigned long freq = (unsigned long) (WSPR_FREQ);
 #include <int.h>
 #include <string.h>
 #include <SoftwareSerial.h>
-
 #include <Wire.h>
 #include <TinyGPS++.h>
 
@@ -52,37 +51,33 @@ enum mode
 Si5351 si5351;
 JTEncode jtencode;
 
-// Global variables
 
-
-#define DAYTIME_RADIATION 180 // Operation is prevented below these values (e.g. nighttime)
-#define MORN_TEMP -30
 #define MIN_VOLTAGE 2.8
-#define BMP280_I2C_ALT true // True if the pressure sensor (BMP280) uses the alternate i2c add
-//uint8_t dbm; // dbm field of WSPR
 
-float tempOutside, pressure; // set once in tempPress.h
+//float tempOutside, pressure; // set once in tempPress.h
 int volts = 0;
-double gpsAltitude = 10000; // Testing value
+double gpsAltitude = 0; // Testing value
 double gpsSpeed = 0.;       // Testing values
 char call_telemetry[7];     // WSPR telemetry callsign
 char loc_telemetry[5];      // WSPR telemetry locator
 uint8_t dbm_telemetry;      // WSPR telemetry dbm
+uint8_t dbm_standard;      // WSPR telemetry dbm
 
 char message1[14] = ""; // Message1 (13 char limit) for JT9
 char message2[14] = ""; // Message2 (13 char limit) for JT9
 
-char loc4[5]; // 4 digit gridsquare locator
-char loc6[7]; // 6 digit gridsquare locator
+char loc4[5]; // 4 digit grid square locator
+char loc4_telemetry[5]; // 4 digit grid square used for the telemetry message
+char loc6[7]; // 6 digit grid square locator
 char loc8[3]; // Last 2 digits of the 8-digit locator
 
 byte Hour, Minute, Second; // used for timing
-long lat, lon;             //oldlat, oldlon;     // used for location
+long lat, lon;             // used for location
 //uint8_t tx_buffer[255];            // WSPR Tx buffer
 uint8_t tx_buffer[165];
-uint8_t symbol_count = WSPR_SYMBOL_COUNT; // JTencode
-uint16_t tone_delay, tone_spacing;        // JTencode
-
+uint8_t symbol_count = WSPR_SYMBOL_COUNT; 
+uint16_t tone_delay, tone_spacing;        // for digital encoding
+int satellites = 0;
 int alt_meters = 0;
 bool telemetry_set = false;
 int Sats = 0;
@@ -91,18 +86,7 @@ double latitude = 10.;
 double longitude = 10.;
 
 // Function prototypes below
-double getAltitude();
-int readRadiation();
-void setGPStime();
-void rf_off();
-void rf_on(int32_t freqCorrection);
-void call_telem();
-void loc8calc();
-void call_dbm_telem();
-void loc_dbm_telem();
 void sleep();
-float getTempCPU();
-double getTemperature();
 
 #ifdef DEBUG
 #define POUTPUT(x) Serial.print x
@@ -116,30 +100,29 @@ double getTemperature();
 #define POUTPUTLN(x)
 #endif
 
-#define ppsPin  2 
-#define RADIATION_PIN A7 // Analog radiation sensor
-#define RFPIN 9 // Not used
-#define SLEEP_PIN 7
+#define ppsPin  2 // GPS pulse per second for transmit frequency calibration (interrupt)
+#define RFPIN 9 // Can be used to turn off RF see rf_off() and sleep()
+#define SLEEP_PIN 7 // Not used - can be used to turn off system between transmissions see sleep()
 #define DBGPIN 13
-#define GPS_POWER 6 // Pull down to turn on GPS module
-#define  XtalCalibratCtPIN 5   // SI5351 calibration clock
-static const int RxPin = 4;
-static const int TxPin = 3;
+#define GPS_POWER 6 // Pull down to turn on GPS module (not used) see sleep()
+#define  XtalCalibratCtPIN 5   // SI5351 calibration signal (counter)
+static const int RxPin = 4;  // for serial communication with gps
+static const int TxPin = 3;  // for serial communication with gps
 static const uint32_t GPSBaud = 9600;
 
 #include "GPS.h"            // code to set U-Blox GPS into airborne mode
-//#include "ModeDef.h"        // JT mode definitions
 #include "SI5351Interface.h" // Sends messages using SI5351
 #include "SendMessages.h"        // schedules the sending of messages
 
 TinyGPSPlus gps;
 SoftwareSerial ss(RxPin, TxPin);
-// gps must lock within 15 minutes or system will sleep or use the default location
-const unsigned long gpsTimeout = 9000000; 
+// gps must lock position within 15 minutes or system will sleep or use the default location if the clock was set
+const unsigned long gpsTimeout = 900000; // in milliseconds
 unsigned long gpsStartTime = 0;
 
 void PPSinterrupt()
 {
+  // Calibration function that counts SI5351 clock 2 for 40 seconds
   // Called on every pulse per second after gps sat lock
   if (CalibrationDone == true) return;
   tcount++;
@@ -152,17 +135,17 @@ void PPSinterrupt()
   {     
     TCCR1B = 0;                                  //Turn off counter
     // XtalFreq = overflow count + current count
-    XtalFreq = 50 + (mult * 0x10000 + TCNT1)/4;  
+    XtalFreq = 50 + (mult * 0x10000 + TCNT1)/4;  // Actual crystal frequency
     correction = 25000000./(float)XtalFreq;
     // I found that adjusting the transmit freq gives a cleaner signal
     freq = (unsigned long) (WSPR_FREQ*(correction));
     // random number to create random frequency -spread spectrum
-    freq = freq +(unsigned long) random(-75,75);
+    freq = freq +(unsigned long) random(-75,75);  // random freq in middle 150 Hz of wspr band
     //FreqCorrection_ppb = (int32_t)((1.-correction)*1e9);
     POUTPUT(F(" Final Xtal Corrections "));
     POUTPUTLN((XtalFreq));
+    POUTPUT(F(" Transmit Frequency  "));
     POUTPUTLN((freq));
-    POUTPUTLN((FreqCorrection_ppb));          //Calculated correction factor
     mult = 0;
     tcount = 0;                              //Reset the seconds counter
     CalibrationDone = true;                  
@@ -178,29 +161,26 @@ ISR(TIMER1_OVF_vect)
 }
 void setup()
 {
+  wdt_enable(WDTO_8S);
     //Set up Timer1 as a frequency counter - input at pin 5
   TCCR1B = 0;                                    //Disable Timer5 during setup
   TCCR1A = 0;                                    //Reset
   TCNT1  = 0;                                    //Reset counter to zero
   TIFR1  = 1;                                    //Reset overflow
   TIMSK1 = 1;                                    //Turn on overflow flag
-  randomSeed(analogRead(0));
-  pinMode(RADIATION_PIN, INPUT);
+  randomSeed(analogRead(0));  // For picking a random frequency
+  pinMode(SENSOR_PIN, INPUT);
   pinMode(RFPIN, OUTPUT);
   pinMode(SLEEP_PIN, OUTPUT);
   pinMode(GPS_POWER, OUTPUT);
   digitalWrite(RFPIN, LOW);
   digitalWrite(SLEEP_PIN, LOW);
 
-#ifdef DEBUG
-  Serial.begin(9600);
-#endif
-
-  gpsOn();
-
+  #ifdef DEBUG
+    Serial.begin(9600);
+  #endif
+  POUTPUTLN((F("STARTING")));
   si5351_calibrate_init();
-
-
 
     // Inititalize GPS 1pps input
   pinMode(ppsPin, INPUT_PULLUP);
@@ -208,13 +188,11 @@ void setup()
   // Set 1PPS pin 2 for external interrupt input
   attachInterrupt(digitalPinToInterrupt(ppsPin), PPSinterrupt, RISING); 
 
-  //Serial.begin(9600);
-  POUTPUTLN((F("START")));
   float cpuTemp = getTempCPU();
-  POUTPUT((F(" Temp-> ")));
+  POUTPUT((F(" Temperture ")));
   POUTPUTLN((cpuTemp));
 
-  POUTPUT(F(" Battery Voltage "));
+  POUTPUT(F(" Voltage "));
   volts = readVcc();
   POUTPUTLN((volts));
   if (volts <= MIN_VOLTAGE)
@@ -231,12 +209,11 @@ int loopj = 0;
 bool rfpinon = false;
 void loop()
 {
-  gpsOn();
-
-  if (gpsGetInfo() == false)
+  bool getInfo = gpsGetInfo();
+  wdt_disable();
+  if ( getInfo == false)
     sleep(); // did not sync with sats
 
-  gpsOff();
   POUTPUTLN((F(" Starting Transmit Logic")));
   SendMessages();
   sleep();
@@ -254,17 +231,16 @@ bool gpsGetInfo()
   unsigned long millsTime = 0;
   gpsStartTime = millis();
   millsTime = millis();
-  POUTPUTLN((millsTime));
-  POUTPUTLN((gpsTimeout));
   bool hiAltitudeSet = false;
+  POUTPUTLN((F("Waiting for GPS to find satellites - 5-10 min")));
   while (millis() < gpsStartTime + gpsTimeout)
   {
-    
+    wdt_reset();
     while (ss.available() > 0)
       gps.encode(ss.read()); 
 
     if (gps.charsProcessed() > 10 && hiAltitudeSet == false)
-    {
+    { // put the gps module into high altitude mode
       ss.write("$PMTK886,3*2B\r\n");
       hiAltitudeSet = true;
     }
@@ -293,9 +269,15 @@ bool gpsGetInfo()
        longitude = gps.location.lng();
        locSet = true;
      }
-       altitudeSet=true;
+
      if( locSet && speedSet && altitudeSet && clockSet )
+     {
+      satellites = gps.satellites.value();
+      POUTPUT((F(" Number of satellites found ")));
+      POUTPUTLN((satellites));
+      // start transmission loop
       return true;
+     }
 
     loopi++;
 
@@ -319,16 +301,17 @@ bool gpsGetInfo()
       if (wiringCounter > 15)
       { 
         wiringCounter = 0;
-        #ifdef DEBUG
+        // If DEBUG_SI5351 is defined, the system will transmit, but not on the correct minute
+        // Use this for unit testing when there is no gps attached.
+        #ifdef DEBUG_SI5351
           return true;
         #endif
-        gpsBounce();
       }
     }
 
   }
-  POUTPUTLN((F(" GPS Timeout ")));
-  if(clockSet==true)
+  POUTPUTLN((F(" GPS Timeout - no satellites found ")));
+  if(clockSet==true && )
   {
     // Send report anyway if only the clock has been set
     clockSet = false; // needed for testing only
@@ -338,5 +321,8 @@ bool gpsGetInfo()
     return true;
   }
   else
+  {
     return false;
+  }
 }
+
