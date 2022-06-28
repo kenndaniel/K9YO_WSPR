@@ -2,21 +2,6 @@
 #include "CustomSensor.h"
 
 
-void code_characters(char Callsign[],  float gpsSpeed , float temp)
-{ // compose the custom telemtry callsign and convert values to characters and number
-        Callsign[0] = telemID[0]; // first part of telem call  e.g. T
-        Callsign[1] = telemID[1]; // second part of telem call e.g. 1
-        // The remainder of this message can be customized for different sensors
-        int fineSpeed = int(gpsSpeed) % 8;
-        Callsign[2] = codeNumberField(0, 9, fineSpeed);  // third position must be a number
-        Callsign[3] = codeCharacterField(0, 200, int(gpsSpeed));
-        
-        Callsign[4] = loc6[4];  // Example 5th character of grid square
-        Callsign[5] = loc6[5];  // Example 6th character of grid square
-        Callsign[6] = '\0';
-        Serial.println(Callsign);
-
-}
 
 void code_std_telem_characters(char Callsign[],  float volts , float temp, int sats)
 { // compose the standard WB8ELK telemtry callsign -- convert values to characters and numbers
@@ -40,15 +25,6 @@ void code_standard_telemetry_callsign()
   
 }
 
-void code_custom_telemetry_callsign()
-{
-  float tempCPU = getTempCPU();
-
-  // code telemetry callsign
-  code_characters(call_telemetry, gpsSpeed, tempCPU);
-  
-}
-
 void code_telemety_loc()
 {  // loc4_telemetry is coded into the 4 characters of the location field e.g. EN62
   // This can be changed to code sensor data.
@@ -56,11 +32,35 @@ void code_telemety_loc()
     charArrayCpy(loc4_telemetry, loc4, 4);
 }
 
-
 void code_telemetry_power()
 {  // Altitude coded into the power field of the telemetry field
   
   dbm_telemetry = codeFineAltitude(gpsAltitude);
+}
+
+void code_characters(char Callsign[],  float gpsSpeed , float temp)
+{ // compose the custom telemtry callsign and convert values to characters and number
+        Callsign[0] = telemID[0]; // first part of telem call  e.g. T
+        Callsign[1] = telemID[1]; // second part of telem call e.g. 1
+        // The remainder of this message can be customized for different sensors
+        int fineSpeed = int(gpsSpeed) % 8;
+        Callsign[2] = codeNumberField(0, 9, fineSpeed);  // third position must be a number
+        Callsign[3] = codeCharacterField(0, 200, int(gpsSpeed));
+        
+        Callsign[4] = loc6[4];  // Example 5th character of grid square
+        Callsign[5] = loc6[5];  // Example 6th character of grid square
+        Callsign[6] = '\0';
+        Serial.println(Callsign);
+
+}
+
+void code_custom_telemetry_callsign()
+{
+  float tempCPU = getTempCPU();
+
+  // code telemetry callsign
+  code_characters(call_telemetry, gpsSpeed, tempCPU);
+  
 }
 
 void code_custom_telemetry_power()
