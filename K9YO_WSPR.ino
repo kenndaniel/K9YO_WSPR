@@ -52,7 +52,7 @@ Si5351 si5351;
 JTEncode jtencode;
 
 
-#define MIN_VOLTAGE 2.8
+#define MIN_VOLTAGE 2.6
 
 //float tempOutside, pressure; // set once in tempPress.h
 int volts = 0;
@@ -195,8 +195,7 @@ void setup()
   POUTPUT(F(" Voltage "));
   volts = readVcc();
   POUTPUTLN((volts));
-  if (volts <= MIN_VOLTAGE)
-  sleep();
+  //if (volts <= MIN_VOLTAGE) sleep();
 
   digitalWrite(DBGPIN, HIGH);
 
@@ -311,7 +310,7 @@ bool gpsGetInfo()
 
   }
   POUTPUTLN((F(" GPS Timeout - no satellites found ")));
-  if(clockSet==true && )
+  if(clockSet==true)
   {
     // Send report anyway if only the clock has been set
     clockSet = false; // needed for testing only

@@ -1,5 +1,5 @@
 /*
-   Functions that interface with the SI5351 Transmitter
+   Low level functions that perform the final message encoding and interface with the SI5351 Transmitter
 */
 /*
    Mode defines
@@ -63,31 +63,6 @@ void setModeWSPR_telem()
   jtencode.wspr_encode(call_telemetry, loc4_telemetry, dbm_telemetry, tx_buffer);
 }
 
-/*
-   Message encoding
-*/
-void encode() // Loop through the string, transmitting one character at a time
-{
-  uint8_t i;
-  digitalWrite(RFPIN, HIGH);
-  si5351.output_enable(SI5351_CLK1, 1); // Reset the tone to the base frequency and turn on the output
-  const unsigned long period = tone_delay;
-  unsigned long time_now = 0;
-
-  for (i = 0; i < symbol_count; i++) // Now transmit the channel symbols
-  {
-    time_now = millis();
-    si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK1);
-    while(millis() < time_now + period)  // Found to be more accruate
-    {}
-    //delay(tone_delay);
-
-  }
-
-  si5351.output_enable(SI5351_CLK1, 0); // Turn off the output
-     
-  digitalWrite(RFPIN, LOW);
-}
 
 void si5351_calibrate_init()
 {
@@ -101,19 +76,55 @@ void si5351_calibrate_init()
   //else {POUTPUTLN((F(" SI5355  Init Success")));}
   si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_2MA); //  Check datasheet.
   unsigned long calfreq = 2500000UL;
-  si5351.set_freq(calfreq*100, SI5351_CLK2);  // set calibration count frequency to 2.5 MHz
+  si5351.set_freq(calfreq*100, SI5351_CLK2);  // set calibration frequency to 2.5 MHz
   si5351.output_enable(SI5351_CLK2, 1);   // Enable output  
+}
+
+/*
+   Message encoding
+*/
+void encode() // Loop through the string, transmitting one character at a time
+{
+  uint8_t i;
+  digitalWrite(RFPIN, HIGH);
+  si5351.output_enable(SI5351_CLK1, 1); // Reset the tone to the base frequency and turn on the output
+  si5351.output_enable(SI5351_CLK0, 1);
+  const unsigned long period = tone_delay;
+  unsigned long time_now = 0;
+
+  for (i = 0; i < symbol_count; i++) // Now transmit the channel symbols
+  {
+    time_now = millis();
+    //si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK1); // not needed for inverted output on CLK!
+    si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK0);
+    while(millis() < time_now + period)  // Found to be more accruate
+    {}
+    //delay(tone_delay);
+
+  }
+
+  si5351.output_enable(SI5351_CLK1, 0); // Turn off the output
+  si5351.output_enable(SI5351_CLK0, 0);   
+  digitalWrite(RFPIN, LOW);
 }
 
 
 void rf_on(int32_t freqCorrection)
 {
-  // freqCorrection correction in ppb ( differece in Hz time 10)
   digitalWrite(RFPIN, HIGH);
-  si5351.set_correction(freqCorrection, SI5351_PLL_INPUT_XO);
+  // freqCorrection correction in ppb ( differece in Hz times 10)
+  // It was found that changing the frequency provides a cleaner signal than changing the pll below
+  //si5351.set_correction(freqCorrection, SI5351_PLL_INPUT_XO);
   si5351.output_enable(SI5351_CLK2, 0); // Disable calibration signal
+
   si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_8MA); // Set for max power if desired. Check datasheet.
+  si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA); // Set for max power if desired. Check datasheet.
+  uint8_t one = 1;
+  uint8_t zero = 0;
+  si5351.set_clock_invert(SI5351_CLK1,one);  // make one clock 180 deg out of phase from the other
+  si5351.set_clock_invert(SI5351_CLK0,zero);
   si5351.output_enable(SI5351_CLK1, 0);                 // Disable the clock initially
+  si5351.output_enable(SI5351_CLK0, 0); 
 }
 
 
