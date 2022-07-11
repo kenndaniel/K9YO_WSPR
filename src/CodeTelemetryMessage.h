@@ -8,8 +8,8 @@ void code_std_telem_characters(char Callsign[],  float volts , float temp, int s
         Callsign[0] = std_telemID[0]; // first part of telem call e.g. Q
         Callsign[1] = codeStdPosition2(int(temp),sats);
         Callsign[2] = std_telemID[1]; // second part of telem call e.g. 1
-        // Standard WB8ELK uses 3.3v to 5.8v for coding.  This is too large for a 3v system so 1v is added
-        Callsign[3] = codeCharacterField(33, 58, int((volts/100.+10.))); 
+        // Standard WB8ELK uses 3.3v to 5.8v for coding.  Note that the system will operate with only 3 v
+        Callsign[3] = codeCharacterField(33, 58, int((volts/100.))); 
         Callsign[4] = loc6[4];  // 5th character of grid square
         Callsign[5] = loc6[5];  // 6th character of grid square
         Callsign[6] = '\0';
