@@ -9,9 +9,9 @@
 */
 #define DEBUG // Debug output is generated if DEBUG is defined
 //#define DEBUG_SI5351  // Used only for testing transmission when no gps module is attached
-const char call[] = "K9YO";     // Amateur callsign
-const char std_telemID[] = "Q6";  // Standard telemetry prefix e.g. Q1 is Qx1xxx
-const int send_time_slot = 6;   // ten minute telemetry transmission time slot: 0,2,4,6 or 8
+const char call[] = "K9YOA";     // Amateur callsign
+const char std_telemID[] = "07";  // Standard telemetry prefix e.g. Q1 is Qx1xxx
+const int send_time_slot = 0;   // the time slot for the telemetry transmission : 0,2,4,6 or 8
 // Typically nothing to be changed below this point
 
 // Center frequency of the band to transmit on

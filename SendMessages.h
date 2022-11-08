@@ -77,7 +77,7 @@ void SendMessages() // Timing
   detachInterrupt(digitalPinToInterrupt(ppsPin)); // Disable the gps pps interrupt
   
 
-  rf_on(FreqCorrection_ppb);  //  turn on transmitter
+  rf_on();  //  turn on transmitter
   POUTPUTLN(F(" Sending Standard Message "));
   digitalWrite(DBGPIN, HIGH);
   encode();      // begin radio transmission

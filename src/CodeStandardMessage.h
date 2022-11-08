@@ -28,7 +28,7 @@ void code_location()
   charArrayCpy(loc6, MH, 6);
   POUTPUT((F(" Grid Square =")));
   POUTPUTLN((loc6));
-  charArrayCpy(loc8, MH[6], 2);
+  charArrayCpy(loc8, MH, 2);
 }
 
 void code_standard_power()

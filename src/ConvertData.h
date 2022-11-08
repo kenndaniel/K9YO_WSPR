@@ -36,7 +36,7 @@ char codeNumberField(int min, int max, int value)
 
 char codeCharacterField(int min, int max, int value)
 {
-    value = int(26 * (float)(value - min) / (float)(max - min));
+    value = int(26. * (float)(value - min) / (float)(max - min));
     if (value < 0)
         value = 0;
     if (value > 25)

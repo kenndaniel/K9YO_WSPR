@@ -13,7 +13,6 @@ void code_std_telem_characters(char Callsign[],  float volts , float temp, int s
         Callsign[4] = loc6[4];  // 5th character of grid square
         Callsign[5] = loc6[5];  // 6th character of grid square
         Callsign[6] = '\0';
-
 }
 
 void code_standard_telemetry_callsign()

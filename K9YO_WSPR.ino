@@ -29,14 +29,9 @@ unsigned long freq = (unsigned long) (WSPR_FREQ);
 #include <avr/interrupt.h> 
 #include <avr/io.h> 
 #include <avr/wdt.h>
-#include <TimeLib.h>
 #include <si5351.h>
 #include <JTEncode.h>
-#include <rs_common.h>
-#include <int.h>
-#include <string.h>
 #include <SoftwareSerial.h>
-#include <Wire.h>
 #include <TinyGPS++.h>
 
 //TinyGPSPlus gps;
@@ -99,7 +94,7 @@ void sleep();
 #else
 #define POUTPUTLN(x)
 #endif
-
+#define RANDOM_PIN 0 // used to generate a seed for the random number gerator
 #define ppsPin  2 // GPS pulse per second for transmit frequency calibration (interrupt)
 #define RFPIN 9 // Can be used to turn off RF see rf_off() and sleep()
 #define SLEEP_PIN 7 // Not used - can be used to turn off system between transmissions see sleep()
@@ -110,55 +105,18 @@ static const int RxPin = 4;  // for serial communication with gps
 static const int TxPin = 3;  // for serial communication with gps
 static const uint32_t GPSBaud = 9600;
 
-#include "GPS.h"            // code to set U-Blox GPS into airborne mode
-#include "SI5351Interface.h" // Sends messages using SI5351
+SoftwareSerial ss(RxPin, TxPin);
+#include "./src/GPS.h"            // code to set U-Blox GPS into airborne mode
+#include "./src/SI5351Interface.h" // Sends messages using SI5351
 #include "SendMessages.h"        // schedules the sending of messages
 
 TinyGPSPlus gps;
-SoftwareSerial ss(RxPin, TxPin);
+
 // gps must lock position within 15 minutes or system will sleep or use the default location if the clock was set
 const unsigned long gpsTimeout = 900000; // in milliseconds
 unsigned long gpsStartTime = 0;
 
-void PPSinterrupt()
-{
-  // Calibration function that counts SI5351 clock 2 for 40 seconds
-  // Called on every pulse per second after gps sat lock
-  if (CalibrationDone == true) return;
-  tcount++;
-  if (tcount == 4)  // Start counting the 2.5 MHz signal from Si5351A CLK0
-  {
-    TCCR1B = 7;    //Count on rising edge of pin 5
-    TCNT1  = 0;    //Reset counter to zero
-  }
-  else if (tcount == 44)  //The 40 second counting time has elapsed - stop counting
-  {     
-    TCCR1B = 0;                                  //Turn off counter
-    // XtalFreq = overflow count + current count
-    XtalFreq = 50 + (mult * 0x10000 + TCNT1)/4;  // Actual crystal frequency
-    correction = 25000000./(float)XtalFreq;
-    // I found that adjusting the transmit freq gives a cleaner signal
-    freq = (unsigned long) (WSPR_FREQ*(correction));
-    // random number to create random frequency -spread spectrum
-    freq = freq +(unsigned long) random(-75,75);  // random freq in middle 150 Hz of wspr band
-    //FreqCorrection_ppb = (int32_t)((1.-correction)*1e9);
-    POUTPUT(F(" Final Xtal Corrections "));
-    POUTPUTLN((XtalFreq));
-    POUTPUT(F(" Transmit Frequency  "));
-    POUTPUTLN((freq));
-    mult = 0;
-    tcount = 0;                              //Reset the seconds counter
-    CalibrationDone = true;                  
-  }
-}
-
-// Timer 1 overflow intrrupt vector.
-ISR(TIMER1_OVF_vect) 
-{ // This executes when the count of cycles on pin 5 overflows
-  // pin 5 is connected to clock 2 of si5351
-  mult++;                                          //Increment multiplier
-  TIFR1 = (1<<TOV1);                               //Clear overlow flag 
-}
+#include "./src/FrequencyCorrection.h"
 void setup()
 {
   wdt_enable(WDTO_8S);
@@ -167,8 +125,9 @@ void setup()
   TCCR1A = 0;                                    //Reset
   TCNT1  = 0;                                    //Reset counter to zero
   TIFR1  = 1;                                    //Reset overflow
-  TIMSK1 = 1;                                    //Turn on overflow flag
-  randomSeed(analogRead(0));  // For picking a random frequency
+  TIMSK1 = 1;  
+  uint8_t randomPin = RANDOM_PIN;                              //Turn on overflow flag
+  randomSeed(analogRead( RANDOM_PIN ));  // Initialize random number generator
   pinMode(SENSOR_PIN, INPUT);
   pinMode(RFPIN, OUTPUT);
   pinMode(SLEEP_PIN, OUTPUT);
@@ -182,7 +141,7 @@ void setup()
   POUTPUTLN((F("STARTING")));
   si5351_calibrate_init();
 
-    // Inititalize GPS 1pps input
+    // Inititalize GPS pps input
   pinMode(ppsPin, INPUT_PULLUP);
 
   // Set 1PPS pin 2 for external interrupt input
@@ -240,7 +199,8 @@ bool gpsGetInfo()
 
     if (gps.charsProcessed() > 10 && hiAltitudeSet == false)
     { // put the gps module into high altitude mode
-      ss.write("$PMTK886,3*2B\r\n");
+      SetHighAltitude();
+      //ss.write("$PMTK886,3*2B\r\n");
       hiAltitudeSet = true;
     }
 

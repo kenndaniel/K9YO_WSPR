@@ -97,9 +97,8 @@ void encode() // Loop through the string, transmitting one character at a time
     time_now = millis();
     //si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK1); // not needed for inverted output on CLK!
     si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK0);
-    while(millis() < time_now + period)  // Found to be more accruate
+    while(millis() < time_now + period)  // Found to be more accruate than delay()
     {}
-    //delay(tone_delay);
 
   }
 
@@ -109,7 +108,7 @@ void encode() // Loop through the string, transmitting one character at a time
 }
 
 
-void rf_on(int32_t freqCorrection)
+void rf_on()
 {
   digitalWrite(RFPIN, HIGH);
   // freqCorrection correction in ppb ( differece in Hz times 10)
