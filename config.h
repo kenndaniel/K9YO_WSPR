@@ -9,7 +9,7 @@
 */
 #define DEBUG // Debug output is generated if DEBUG is defined
 //#define DEBUG_SI5351  // Uncomment when testing without the GPS module attached.
-const char call[] = "K9IQP";     // Amateur callsign
+const char call[] = "AA0AA";     // Amateur callsign
 const char std_telemID[] = "07";  // Standard telemetry prefix e.g. Q1 is Qx1xxx
 const int send_time_slot = 0;   // the time slot for the telemetry transmission : 0,2,4,6 or 8
 // Typically nothing to be changed below this point
