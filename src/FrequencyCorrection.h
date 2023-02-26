@@ -16,17 +16,7 @@ void PPSinterrupt()
     XtalFreq = 50 + (mult * 0x10000 + TCNT1)/4;  // Actual crystal frequency
     correction = 25000000./(float)XtalFreq;
     // I found that adjusting the transmit freq gives a cleaner signal
-    freq = (unsigned long) (WSPR_FREQ*(correction));
-    // random number to create random frequency -spread spectrum
-    float randomChang = random(-75,75);
-    freq = freq +(unsigned long) randomChang;  // random freq in middle 150 Hz of wspr band
-    //FreqCorrection_ppb = (int32_t)((1.-correction)*1e9);
-    POUTPUT(F(" Random Change "));
-    POUTPUTLN((randomChang));
-    POUTPUT(F(" Final Xtal Corrections "));
-    POUTPUTLN((XtalFreq));
-    POUTPUT(F(" Transmit Frequency  "));
-    POUTPUTLN((freq));
+
     mult = 0;
     tcount = 0;                              //Reset the seconds counter
     CalibrationDone = true;                  

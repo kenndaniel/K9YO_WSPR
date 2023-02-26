@@ -8,7 +8,7 @@ void code_std_telem_characters(char Callsign[],  float volts , float temp, int s
         Callsign[0] = std_telemID[0]; // first part of telem call e.g. Q
         Callsign[1] = codeStdPosition2(int(temp),sats);
         Callsign[2] = std_telemID[1]; // second part of telem call e.g. 1
-        // Standard WB8ELK uses 3.3v to 5.8v for coding.  Note that the system will operate with only 3 v
+        // Standard WB8ELK uses 3.3v to 5.8v for coding. 
         Callsign[3] = codeCharacterField(33, 58, int((volts/100.))); 
         Callsign[4] = loc6[4];  // 5th character of grid square
         Callsign[5] = loc6[5];  // 6th character of grid square
@@ -37,7 +37,7 @@ void code_telemetry_power()
   dbm_telemetry = codeFineAltitude(gpsAltitude);
 }
 
-void code_characters(char Callsign[],  float gpsSpeed , float temp)
+void code_characters(char Callsign[],  float gpsSpeed )
 { // compose the custom telemtry callsign and convert values to characters and number
         Callsign[0] = telemID[0]; // first part of telem call  e.g. T
         Callsign[1] = telemID[1]; // second part of telem call e.g. 1
@@ -58,7 +58,7 @@ void code_custom_telemetry_callsign()
   float tempCPU = getTempCPU();
 
   // code telemetry callsign
-  code_characters(call_telemetry, gpsSpeed, tempCPU);
+  code_characters(call_telemetry, gpsSpeed);
   
 }
 

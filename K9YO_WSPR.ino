@@ -21,20 +21,19 @@ volatile unsigned long mult=0;
 volatile unsigned int tcount=0;
 volatile unsigned long XtalFreq=25000000UL;
 volatile int32_t FreqCorrection_ppb = 0;
-volatile float correction =0;
-unsigned long freq = (unsigned long) (WSPR_FREQ);
+volatile float correction =1;
+unsigned long freq = (unsigned long) (WSPR_FREQ1);
 
 
-#include <Time.h>
+#include <TimeLib.h>
 #include <avr/interrupt.h> 
 #include <avr/io.h> 
-#include <avr/wdt.h>
 #include <si5351.h>
 #include <JTEncode.h>
 #include <SoftwareSerial.h>
-#include <TinyGPS++.h>
+#include <TinyGPSPlus.h>
 
-//TinyGPSPlus gps;
+TinyGPSPlus gps;
 
 // Enumerations
 enum mode
@@ -82,6 +81,7 @@ double longitude = 10.;
 
 // Function prototypes below
 void sleep();
+void waitForEvenMinute();
 
 #ifdef DEBUG
 #define POUTPUT(x) Serial.print x
@@ -110,8 +110,6 @@ SoftwareSerial ss(RxPin, TxPin);
 #include "./src/SI5351Interface.h" // Sends messages using SI5351
 #include "SendMessages.h"        // schedules the sending of messages
 
-TinyGPSPlus gps;
-
 // gps must lock position within 15 minutes or system will sleep or use the default location if the clock was set
 const unsigned long gpsTimeout = 900000; // in milliseconds
 unsigned long gpsStartTime = 0;
@@ -119,14 +117,13 @@ unsigned long gpsStartTime = 0;
 #include "./src/FrequencyCorrection.h"
 void setup()
 {
-  wdt_enable(WDTO_8S);
+  //wdt_enable(WDTO_8S);
     //Set up Timer1 as a frequency counter - input at pin 5
-  TCCR1B = 0;                                    //Disable Timer5 during setup
-  TCCR1A = 0;                                    //Reset
-  TCNT1  = 0;                                    //Reset counter to zero
-  TIFR1  = 1;                                    //Reset overflow
-  TIMSK1 = 1;  
-  uint8_t randomPin = RANDOM_PIN;                              //Turn on overflow flag
+  TCCR1B = 0;  //Disable Timer5 during setup
+  TCCR1A = 0;  //Reset
+  TCNT1  = 0;  //Reset counter to zero
+  TIFR1  = 1;  //Reset overflow
+  TIMSK1 = 1;  //Turn on overflow flag                   
   randomSeed(analogRead( RANDOM_PIN ));  // Initialize random number generator
   pinMode(SENSOR_PIN, INPUT);
   pinMode(RFPIN, OUTPUT);
@@ -168,32 +165,31 @@ bool rfpinon = false;
 void loop()
 {
   bool getInfo = gpsGetInfo();
-  wdt_disable();
+  //wdt_disable();
   if ( getInfo == false)
     sleep(); // did not sync with sats
 
   POUTPUTLN((F(" Starting Transmit Logic")));
+  while(true)
+  {
   SendMessages();
-  sleep();
-
+  }
 }
 
-bool clockSet = false, locSet = false, altitudeSet = false, speedSet = false;
-int wiringCounter = 1;
+//bool clockSet = false, locSet = false, altitudeSet = false, speedSet = false;
+
 
 bool gpsGetInfo()
 {
-
-  clockSet = false, locSet = false, altitudeSet = false, speedSet = false;
+  int wiringCounter = 1;
+  bool clockSet = false, locSet = false, altitudeSet = false, speedSet = false;
   ss.begin(GPSBaud);
-  unsigned long millsTime = 0;
   gpsStartTime = millis();
-  millsTime = millis();
   bool hiAltitudeSet = false;
   POUTPUTLN((F("Waiting for GPS to find satellites - 5-10 min")));
   while (millis() < gpsStartTime + gpsTimeout)
   {
-    wdt_reset();
+    //wdt_reset();
     while (ss.available() > 0)
       gps.encode(ss.read()); 
 
