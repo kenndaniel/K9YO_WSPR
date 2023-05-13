@@ -16,9 +16,9 @@ void charArrayCpy(char dest[], char src[], int cnt)
   dest[cnt] = '\0';
 }
 
-#include "./src/ConvertData.h"
+#include "./ConvertData.h"
 #include "./src/CodeStandardMessage.h"
-#include "./src/CodeTelemetryMessage.h"
+#include "./CodeTelemetryMessage.h"
 
 void SendMessages() // Timing
 {
