@@ -8,18 +8,19 @@ void PPSinterrupt()
   {
     TCCR1B = 7;    //Count on rising edge of pin 5
     TCNT1  = 0;    //Reset counter to zero
+    mult=0;
   }
-  else if (tcount == 44)  //The 40 second counting time has elapsed - stop counting
+  else if (tcount == 14)  //The 10 second counting time has elapsed - stop counting
   {     
     TCCR1B = 0;                                  //Turn off counter
     // XtalFreq = overflow count + current count
-    XtalFreq = 50 + (mult * 0x10000 + TCNT1)/4;  // Actual crystal frequency
+    XtalFreq = (mult * 0x10000 + TCNT1)-5;  // Actual crystal frequency
     correction = 25000000./(float)XtalFreq;
     // I found that adjusting the transmit freq gives a cleaner signal
 
     mult = 0;
     tcount = 0;                              //Reset the seconds counter
-    CalibrationDone = true;                  
+    CalibrationDone = true;                 
   }
 }
 

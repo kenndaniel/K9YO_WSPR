@@ -160,6 +160,7 @@ void setToFrequency1()
     freq = (unsigned long) (WSPR_FREQ1*(correction));
     // random number to create random frequency -spread spectrum
     float randomChang = random(-75,75);
+    randomChang = 0.;
     freq = freq +(unsigned long) randomChang;  // random freq in middle 150 Hz of wspr band
 
       POUTPUT(F(" Random Change from Band Center "));

@@ -16,9 +16,9 @@ void charArrayCpy(char dest[], char src[], int cnt)
   dest[cnt] = '\0';
 }
 
-#include "./ConvertData.h"
+#include "ConvertData.h"
 #include "./src/CodeStandardMessage.h"
-#include "./CodeTelemetryMessage.h"
+#include "CodeTelemetryMessage.h"
 
 void SendMessages() // Timing
 {
@@ -46,6 +46,7 @@ void SendMessages() // Timing
 // Wait for the beginning of the time slot minute and xtal calibration
   while (!((int)minute() % 2 == 0 && (int)second() < 2 && CalibrationDone == true && sendMinute == true))
   {
+    sendMinute = false;
     if((int)minute()%10 == (send_time_slot -2 )) sendMinute = true;
     if( send_time_slot == 0 && (int)minute()%10 == 8) sendMinute = true;
   
@@ -100,6 +101,11 @@ void SendMessages() // Timing
   //transmit();            // begin radio transmission
 
   // Send standard wspr message on Frequency 2
+  if (WSPR_FREQ2 < 100)
+  {
+     POUTPUTLN((F("No additional bands requested - restarting now ")));
+      resetFunc(); 
+  }
   POUTPUTLN((F("Waiting for Standard WSPR Message on Frequency 2 ")));
   setModeWSPR(); // set WSPR standard message mode
   setToFrequency2();
