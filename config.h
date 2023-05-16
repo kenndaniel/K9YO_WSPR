@@ -9,7 +9,7 @@
 */
 #define DEBUG // Debug output is generated if DEBUG is defined
 //#define DEBUG_SI5351  // Uncomment when testing without the GPS module attached.
-const char call[] = "K9YO";     // Amateur callsign
+const char call[] = "AA9OO";     // Amateur callsign
 const char std_telemID[] = "07";  // Standard telemetry prefix e.g. Q1 is Qx1xxx
 const int send_time_slot = 0;   // the time slot for the telemetry transmission : 0,2,4,6 or 8
 // Typically nothing to be changed below this point
@@ -25,10 +25,10 @@ const int send_time_slot = 0;   // the time slot for the telemetry transmission 
 
 // Technician license holders should set both WSPR_FREQ to WSPR_10m
 // First band to transmit on
-#define WSPR_FREQ1      WSPR_17m  
+#define WSPR_FREQ1      WSPR_20m  
 
 // Optional second band to transmit on 
-#define WSPR_FREQ2      WSPR_17m  
+#define WSPR_FREQ2      WSPR_none  
 // Note that the standard telemetry time slot for FREQ2 will be send_time_slot + 3 for WSPR_FREQ2
 
 // Information for the optional custom telemetry message to send additional data.  
