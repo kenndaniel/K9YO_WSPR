@@ -142,14 +142,14 @@ void setToFrequency2()
   si5351.pll_reset(SI5351_PLLA);
   si5351.pll_reset(SI5351_PLLB);
   freq = (unsigned long) (WSPR_FREQ2*(correction));
-  float randomChang = random(-75,75);
-  freq = freq +(unsigned long) randomChang;
+  float randomChange = random(-75,75);
+  freq = freq +(unsigned long) randomChange;
   POUTPUT(F(" Random Change from Band Center "));
-  POUTPUTLN((randomChang));
+  POUTPUTLN((randomChange));
   POUTPUT(F(" Xtal Corrections "));
   POUTPUTLN((XtalFreq));
   POUTPUT(F(" Frequency "));
-  float dialFreq = WSPR_FREQ2+randomChang;
+  float dialFreq = WSPR_FREQ2+randomChange;
   POUTPUTLN((dialFreq));
 }
 
@@ -159,16 +159,15 @@ void setToFrequency1()
 
     freq = (unsigned long) (WSPR_FREQ1*(correction));
     // random number to create random frequency -spread spectrum
-    float randomChang = random(-75,75);
-    randomChang = 0.;
-    freq = freq +(unsigned long) randomChang;  // random freq in middle 150 Hz of wspr band
+    float randomChange = random(-75,75);
+    freq = freq +(unsigned long) randomChange;  // random freq in middle 150 Hz of wspr band
 
       POUTPUT(F(" Random Change from Band Center "));
-      POUTPUTLN((randomChang));
+      POUTPUTLN((randomChange));
       POUTPUT(F(" Xtal Corrections "));
       POUTPUTLN((XtalFreq));
       POUTPUT(F(" Frequency "));
-      float dialFreq = WSPR_FREQ1+randomChang;
+      float dialFreq = WSPR_FREQ1+randomChange;
       POUTPUTLN((dialFreq));
 
 
