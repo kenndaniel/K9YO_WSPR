@@ -5,4 +5,5 @@
     is less likely to cause a missed time slot.
 4. Config.h option is added to suppress transmission on a second WSPR band
 5. FrequencyCorrection.h was corrected.  The band center frequency was off by 55 Hz.
+6. The default band is now 20m and there is no second transmission.
 
