@@ -181,6 +181,11 @@ void loop()
 
 bool gpsGetInfo()
 {
+  // If DEBUG_SI5351 is defined, the system will transmit, but not on the correct minute
+  // Use this for unit testing when there is no gps attached.
+  #ifdef DEBUG_SI5351
+    return true;
+  #endif
   int wiringCounter = 1;
   bool clockSet = false, locSet = false, altitudeSet = false, speedSet = false;
   ss.begin(GPSBaud);
@@ -256,12 +261,9 @@ bool gpsGetInfo()
       if (wiringCounter > 15)
       { 
         wiringCounter = 0;
-        // If DEBUG_SI5351 is defined, the system will transmit, but not on the correct minute
-        // Use this for unit testing when there is no gps attached.
-        #ifdef DEBUG_SI5351
-          return true;
-        #endif
+
       }
+
     }
 
   }
