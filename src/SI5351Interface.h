@@ -5,33 +5,11 @@
    Mode defines
 */
 
-#define JT9_TONE_SPACING        174           // ~1.74 Hz
 #define WSPR_TONE_SPACING       146           // ~1.46 Hz
 
-#define JT9_DELAY               576          // Delay value for JT9
 #define WSPR_DELAY              683          // Delay value for WSPR
 
-#define JT9_FREQ        14000000UL
 
-void setModeJT9_1()
-{
-  
-  symbol_count = JT9_SYMBOL_COUNT;
-  tone_spacing = JT9_TONE_SPACING;
-  tone_delay = JT9_DELAY;
-  memset(tx_buffer, 0, symbol_count); // Clears Tx buffer from previous operation.
-  jtencode.jt9_encode(message1, tx_buffer);
-}
-
-void setModeJT9_2()
-{
-  
-  symbol_count = JT9_SYMBOL_COUNT;
-  tone_spacing = JT9_TONE_SPACING;
-  tone_delay = JT9_DELAY;
-  memset(tx_buffer, 0, symbol_count); // Clears Tx buffer from previous operation.
-  jtencode.jt9_encode(message2, tx_buffer);
-}
 
 void setModeWSPR()
 { // Sends the info to the si5351 for the standard message
@@ -83,66 +61,118 @@ void si5351_calibrate_init()
 /*
    Message encoding
 */
-void transmit() // Loop through the string, transmitting one character at a time
+#define XMIT_CLOCK0 SI5351_CLK0
+#define XMIT_CLOCK1 SI5351_CLK1
+bool twoChanel = true; // set true to use two channel inverted output, set false to use only one chanel
+
+void rf_on()
 { 
-  bool twoChanel = true;  // set true to use channel 0 and 1 set false to use only channel 0
+
+  delay(10);
+
+  si5351.set_ms_source(XMIT_CLOCK0, SI5351_PLLA);
+  si5351.drive_strength(XMIT_CLOCK0, SI5351_DRIVE_8MA); // Set for max power if desired. Check datasheet.
+  si5351.drive_strength(XMIT_CLOCK1, SI5351_DRIVE_8MA); // Set for max power if desired. Check datasheet.
+
+  si5351.set_clock_fanout(SI5351_FANOUT_MS, 1);
+  si5351.set_clock_source(XMIT_CLOCK1, SI5351_CLK_SRC_MS0); // clock 1 gets freq from clock 0
+  si5351.set_clock_invert(XMIT_CLOCK1, 1);
+
+  si5351.output_enable(XMIT_CLOCK0, 1); 
+  if (twoChanel)
+    si5351.output_enable(XMIT_CLOCK1, 1);
+  
+}
+
+void rf_off()
+{
+  //Disable output
+  si5351.output_enable(XMIT_CLOCK0, 0); 
+  if (twoChanel)
+    si5351.output_enable(XMIT_CLOCK1, 0);
+}
+
+
+void transmit() // Loop through the string, transmitting one character at a time
+{
   uint8_t i;
-  digitalWrite(RFPIN, HIGH);
-  si5351.output_enable(SI5351_CLK0, 1); // Reset the tone to the base frequency and turn on the output
-  if(twoChanel) si5351.output_enable(SI5351_CLK1, 1);
+  rf_on();
+  POUTPUTLN((F(" SI5351 Start Transmission ")));
   const unsigned long period = tone_delay;
   unsigned long time_now = 0;
-  uint8_t one = 1;
 
   for (i = 0; i < symbol_count; i++) // Now transmit the channel symbols
   {
     time_now = millis();
-    si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK0); // not needed for inverted output on CLK!
-    if(twoChanel) si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK1);
-    if(twoChanel) si5351.set_clock_invert(SI5351_CLK1,one);
-    if(twoChanel) si5351.pll_reset(SI5351_PLLA);
-    while(millis() < time_now + period)  // Found to be more accruate than delay()
-    {}
-
+    si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), XMIT_CLOCK0); // clock 1 will follow this
+    
+    while (millis() < time_now + period) // Found to be more accruate than delay()
+    {
+    }
   }
-
-  si5351.output_enable(SI5351_CLK0, 0); // Turn off the output
-  if(twoChanel) si5351.output_enable(SI5351_CLK1, 0);   
-  digitalWrite(RFPIN, LOW);
+  // Turn off the output
+  rf_off();
 }
+// void transmit() // Loop through the string, transmitting one character at a time
+// { 
+//   bool twoChanel = true;  // set true to use channel 0 and 1 set false to use only channel 0
+//   uint8_t i;
+//   digitalWrite(RFPIN, HIGH);
+//   si5351.output_enable(SI5351_CLK0, 1); // Reset the tone to the base frequency and turn on the output
+//   if(twoChanel) si5351.output_enable(SI5351_CLK1, 1);
+//   const unsigned long period = tone_delay;
+//   unsigned long time_now = 0;
+//   uint8_t one = 1;
+
+//   for (i = 0; i < symbol_count; i++) // Now transmit the channel symbols
+//   {
+//     time_now = millis();
+//     si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK0); // not needed for inverted output on CLK!
+//     if(twoChanel) si5351.set_freq((freq * 100) + (tx_buffer[i] * tone_spacing), SI5351_CLK1);
+//     if(twoChanel) si5351.set_clock_invert(SI5351_CLK1,one);
+//     if(twoChanel) si5351.pll_reset(SI5351_PLLA);
+//     while(millis() < time_now + period)  // Found to be more accruate than delay()
+//     {}
+
+//   }
+
+//   si5351.output_enable(SI5351_CLK0, 0); // Turn off the output
+//   if(twoChanel) si5351.output_enable(SI5351_CLK1, 0);   
+//   digitalWrite(RFPIN, LOW);
+// }
 
 
-void rf_on()
-{
-  digitalWrite(RFPIN, HIGH);
+// void rf_on()
+// {
+//   digitalWrite(RFPIN, HIGH);
 
-  si5351.output_enable(SI5351_CLK2, 0); // Disable calibration signal
-  si5351.pll_reset(SI5351_PLLA);
-  si5351.pll_reset(SI5351_PLLB);
+//   si5351.output_enable(SI5351_CLK2, 0); // Disable calibration signal
+//   si5351.pll_reset(SI5351_PLLA);
+//   si5351.pll_reset(SI5351_PLLB);
 
-  si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA); // Set for max power if desired. Check datasheet.
-  si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_8MA); // Set for max power if desired. Check datasheet.
-  //uint8_t one = 1;
-  //uint8_t zero = 0;
-  //si5351.set_clock_invert(SI5351_CLK1,one);  // make one clock 180 deg out of phase from the other
-  //si5351.set_clock_invert(SI5351_CLK0,zero);
+//   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA); // Set for max power if desired. Check datasheet.
+//   si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_8MA); // Set for max power if desired. Check datasheet.
+//   //uint8_t one = 1;
+//   //uint8_t zero = 0;
+//   //si5351.set_clock_invert(SI5351_CLK1,one);  // make one clock 180 deg out of phase from the other
+//   //si5351.set_clock_invert(SI5351_CLK0,zero);
 
-  si5351.output_enable(SI5351_CLK0, 0);                 // Disable the clock initially
-  si5351.output_enable(SI5351_CLK1, 0); 
-}
+//   si5351.output_enable(SI5351_CLK0, 0);                 // Disable the clock initially
+//   si5351.output_enable(SI5351_CLK1, 0); 
+// }
 
 
-void rf_off()
-{
-  digitalWrite(RFPIN, LOW);
-}
+// void rf_off()
+// {
+//   digitalWrite(RFPIN, LOW);
+// }
 
 void setToFrequency2()
 {
   si5351.pll_reset(SI5351_PLLA);
   si5351.pll_reset(SI5351_PLLB);
   freq = (unsigned long) (WSPR_FREQ2*(correction));
-  float randomChange = random(-75,75);
+  float randomChange = random(-15,15);
   freq = freq +(unsigned long) randomChange;
   POUTPUT(F(" Random Change from Band Center "));
   POUTPUTLN((randomChange));
