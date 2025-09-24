@@ -6,6 +6,8 @@
    your needs so long as it remains open source
    and it is for non-commercial use only.
    Please see readme file for more information.
+   
+   Support questions: K9YO@arrl.net
 */
 #define DEBUG // Debug output is generated if DEBUG is defined
 //#define DEBUG_SI5351  // Uncomment when testing without the GPS module attached.
